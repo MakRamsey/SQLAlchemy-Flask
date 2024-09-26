@@ -49,7 +49,6 @@ def welcome():
         f"'start' and 'end' date should be formatted as YYYY-MM-DD in the above two endpoint URLs"
     )
 
-
 # Creating precipitation endpoint/route
 @app.route("/api/v1.0/precipitation")
 def precipitation():
@@ -57,8 +56,9 @@ def precipitation():
     # Establish query date
     query_date = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
-    # Execute query
-    results = session.query(measurement.date, measurement.prcp).\
+    # Execute query using context manager
+    with Session(engine) as session:
+        results = session.query(measurement.date, measurement.prcp).\
         filter(measurement.date >= query_date).all()
 
     # Store query results in a dictionary for display
@@ -71,8 +71,9 @@ def precipitation():
 @app.route("/api/v1.0/stations")
 def stations():
 
-    # Execute query
-    results = session.query(station.station).all()
+    # Execute query using context manager
+    with Session(engine) as session:
+        results = session.query(station.station).all()
 
     # Store query results in a list for display
     list_of_stations = [result[0] for result in results]
@@ -87,8 +88,9 @@ def tobs():
     # Establish query date
     query_date = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
-    # Execute query
-    results = session.query(measurement.date, measurement.tobs).\
+    # Execute query using context manager
+    with Session(engine) as session:
+        results = session.query(measurement.date, measurement.tobs).\
         filter(measurement.station == 'USC00519281').\
         filter(measurement.date >= query_date).all()
     
@@ -97,15 +99,16 @@ def tobs():
     for date, tobs in results:
         temperatures_list.append({date: tobs})
 
-     # Display jsonified result
+    # Display jsonified result
     return jsonify(temperatures_list)
 
 # Creating the first dynamic/variable endpoint/route which accepts 'start date'
 @app.route("/api/v1.0/temp/<start>")
 def data_for_start(start):
     
-    # Execute query based on the 'start date' input
-    results = session.query(func.min(measurement.tobs),
+    # Execute query based on the 'start date' input using context manager
+    with Session(engine) as session:
+        results = session.query(func.min(measurement.tobs),
         func.avg(measurement.tobs),
         func.max(measurement.tobs)).\
         filter(measurement.date >= start).all()
@@ -118,16 +121,17 @@ def data_for_start(start):
              'TAVG': TAVG,
              'TMAX': TMAX
         })
-    
+
     # Display jsonified result
     return jsonify(temp_data)
-                   
+
 # Creating the second dynamic/variable endpoint/route which accepts 'start date' & 'end date'
 @app.route("/api/v1.0/temp/<start>/<end>")
 def data_for_start_end(start, end):
     
-    # Execute query based on the 'start date' & 'end date' inputs
-    results = session.query(func.min(measurement.tobs),
+    # Execute query based on the 'start date' & 'end date' inputs using context manager
+    with Session(engine) as session:
+        results = session.query(func.min(measurement.tobs),
         func.avg(measurement.tobs),
         func.max(measurement.tobs)).\
         filter(measurement.date >= start).\
@@ -141,13 +145,10 @@ def data_for_start_end(start, end):
              'TAVG': TAVG,
              'TMAX': TMAX
         })
-    
+
     # Display jsonified result
     return jsonify(temp_data)
 
-# Close session
-session.close()
-
-# Flask conslusion protocol
+# Flask conclusion protocol
 if __name__ == "__main__":
     app.run(debug=True)
